@@ -6,21 +6,25 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 
-""" hyperparams """
 batch_size = 1024
 n_layers = 24
 d_model = 1024
 
+mnist_args = { 
+    'root': 'data',
+    'train': True,
+    'download': False
+}
 
-""" Load data """
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3015,))])
-train_data = datasets.MNIST(root='data', train=True, download=False, transform=transfom)
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.1307,), (0.3015,))
+])
+
+train_data = datasets.MNIST(**mnist_args, transform=transform)
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-# sample batch to play around:
-x, y = next(iter(train_loader))
 
-#%%
-""" simple MLP """
+
 class Model(nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -39,17 +43,12 @@ class Model(nn.Module):
         return self.output_layer(F.gelu(x))
 
 
-#%%
+x, y = next(iter(train_loader))
 model = Model()
 
 #%%
 with torch.no_grad():
     out = model(x)
 
-#%%
 plt.imshow(out.reshape(batch_size // 16, 16 * 10))
 plt.show()
-
-
-
-
