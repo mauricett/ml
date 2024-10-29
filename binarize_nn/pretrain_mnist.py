@@ -6,27 +6,21 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 
-""" 
-    hyperparams
-"""
+""" hyperparams """
 batch_size = 1024
 n_layers = 24
 d_model = 1024
 
 
-"""
-    Load data 
-"""
+""" Load data """
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3015,))])
-train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
+train_data = datasets.MNIST(root='data', train=True, download=False, transform=transfom)
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 # sample batch to play around:
 x, y = next(iter(train_loader))
 
 #%%
-"""
-    simple MLP
-"""
+""" simple MLP """
 class Model(nn.Module):
     def __init__(self) -> None:
         super().__init__()
