@@ -6,11 +6,11 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 
-batch_size = 1024
 n_layers = 24
 d_model = 1024
+batch_size = 1024
 
-mnist_args = { 
+mnist_args = {
     'root': 'data',
     'train': True,
     'download': False
@@ -26,9 +26,9 @@ train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
 
 class Model(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
-        self.input_layer = nn.Linear(28*28, d_model)
+        self.input_layer  = nn.Linear(28*28, d_model)
         self.output_layer = nn.Linear(d_model, 10)
         self.hidden_layers = [
             (nn.LayerNorm(d_model), nn.Linear(d_model, d_model))
@@ -45,10 +45,10 @@ class Model(nn.Module):
 
 x, y = next(iter(train_loader))
 model = Model()
+loss_fn = nn.CrossEntropyLoss()
 
 #%%
 with torch.no_grad():
     out = model(x)
 
-plt.imshow(out.reshape(batch_size // 16, 16 * 10))
-plt.show()
+loss = loss_fn(out, y)
