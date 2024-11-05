@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 device = 'cpu'
-save = True
+save = False
 n_layers = 2
 d_model = 1024
 batch_size = 512
@@ -49,6 +49,9 @@ class Model(nn.Module):
             }) for _ in range(n_layers - 2)
         ])
 
+    def binarize(self, W, b, t):
+
+
     def forward(self, x):
         bs, _, _, _ = x.shape
         x = self.input_layer(x.reshape(bs, -1))
@@ -65,6 +68,19 @@ loss_fn = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=3e-4)
 #model = torch.compile(model)
 
+model.load_state_dict(torch.load('./model/2_layer_mlp.pt'))
+#optimizer.load_state_dict(torch.load('./model/2_layer_mlp_adam.pt'))
+
+with torch.no_grad():
+    out = model(x.to(device))
+    print(out)
+    print(out.shape)
+
+
+#%%
+
+
+#%%
 for n in range(n_epochs):
     print("Epoch: ", n)
     train_loader = DataLoader(train_data, batch_size, shuffle=True)
@@ -81,8 +97,3 @@ for n in range(n_epochs):
 
 print("Training done :)")
 
-if save:
-    torch.save(model.state_dict(), './model/2_layer_mlp.pt')
-    torch.save(optimizer.state_dict(), './model/2_layer_mlp_adam.pt')
-
-print("Model saved ;)")
