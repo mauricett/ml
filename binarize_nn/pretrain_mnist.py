@@ -6,6 +6,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
+device = 'cpu'
+save = False
 n_layers = 2
 d_model = 1024
 batch_size = 512
@@ -20,18 +22,25 @@ transform = transforms.Compose([
 train_data = datasets.MNIST(root='data', transform=transform, train=True)
 val_data = datasets.MNIST(root='data', transform=transform, train=False)
 
+@torch.no_grad()
 def accuracy(model, test_data):
     val_loader = DataLoader(test_data, batch_size, shuffle=True)
     n_total = test_data.__len__()
     n_correct = 0
 
-    with torch.no_grad():
-        for x, label in val_loader:
-            out = model(x)
-            prediction = torch.argmax(out, dim=-1)
-            n_correct += torch.sum(label == prediction)
+    for x, label in val_loader:
+        x = x.to(device)
+        out = model(x)
+        prediction = torch.argmax(out, dim=-1)
+        n_correct += torch.sum(label.to(device) == prediction)
 
     return n_correct / n_total * 100.
+
+
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.norm = nn.LayerNorm(d_model)
 
 
 class Model(nn.Module):
@@ -39,33 +48,37 @@ class Model(nn.Module):
         super().__init__()
         self.input_layer = nn.Linear(28*28, d_model)
         self.output_layer = nn.Linear(d_model, 10)
-        self.hidden_layers = [
-            (nn.LayerNorm(d_model), nn.Linear(d_model, d_model))
-            for _ in range(n_layers - 2)
-        ]
+
+        self.hidden_layers = nn.ModuleList([
+            nn.ModuleDict({
+                'norm': nn.LayerNorm(d_model),
+                'linear': nn.Linear(d_model, d_model)
+            }) for _ in range(n_layers - 2)
+        ])
 
     def forward(self, x):
         bs, _, _, _ = x.shape
         x = self.input_layer(x.reshape(bs, -1))
-        for layernorm, linear in self.hidden_layers:
-            x = layernorm(F.gelu(x))
-            x = linear(x)
+
+        for layer in self.hidden_layers:
+            x = layer['norm'](F.gelu(x))
+            x = layer['linear'](x)
+
         return self.output_layer(F.gelu(x))
 
 
-model = Model()
-#model = torch.compile(model)
-
+model = Model().to(device)
 loss_fn = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=5e-4)
+optimizer = optim.Adam(model.parameters(), lr=3e-4)
+model = torch.compile(model)
 
 for n in range(n_epochs):
     print("Epoch: ", n)
     train_loader = DataLoader(train_data, batch_size, shuffle=True)
 
     for x, label in train_loader:
-        out = model(x)
-        loss = loss_fn(out, label)
+        out = model(x.to(device))
+        loss = loss_fn(out, label.to(device))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -75,7 +88,8 @@ for n in range(n_epochs):
 
 print("Training done :)")
 
-torch.save(model.state_dict(), './model/2_layer_mlp.pt')
-torch.save(optimizer.state_dict(), './model/2_layer_mlp_adam.pt')
+if save:
+    torch.save(model.state_dict(), './model/2_layer_mlp.pt')
+    torch.save(optimizer.state_dict(), './model/2_layer_mlp_adam.pt')
 
 print("Model saved ;)")
